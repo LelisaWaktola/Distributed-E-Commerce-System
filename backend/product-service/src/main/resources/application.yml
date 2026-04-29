@@ -1,20 +1,21 @@
 spring:
   application:
-    name: order-service
+    name: product-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/order_db
+    url: jdbc:postgresql://localhost:5432/product_service
     username: postgres
-    password:
+    password: your_local_password
     driver-class-name: org.postgresql.Driver
+
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 5
       minimum-idle: 2
       connection-timeout: 30000
 
   jpa:
     hibernate:
-      ddl-auto: update   # use update for dev (auto create tables)
+      ddl-auto: update   # IMPORTANT for local dev
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
     properties:
@@ -22,7 +23,7 @@ spring:
         format_sql: true
 
 server:
-  port: 8083
+  port: 8082
 
 management:
   endpoints:
@@ -32,17 +33,6 @@ management:
   endpoint:
     health:
       show-details: always
-
-services:
-  product-service:
-    url: http://localhost:8082
-  payment-service:
-    url: http://localhost:8084
-
-http:
-  client:
-    connect-timeout: 3000
-    read-timeout: 5000
 
 logging:
   level:
