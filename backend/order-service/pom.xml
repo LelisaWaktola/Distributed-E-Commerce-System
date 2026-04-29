@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.distrishop</groupId>
-    <artifactId>orderservice</artifactId>
+    <artifactId>order-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>orderservice</name>
-    <description>orderservice</description>
+    <name>order-service</name>
+    <description>order-service</description>
     <url/>
     <licenses>
         <license/>
