@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -16,60 +15,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Optional: check localStorage on app load
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-                fetchUserProfile(session.user.id);
-            } else {
-                setLoading(false);
-            }
-        });
-
-        supabase.auth.onAuthStateChange((_event, session) => {
-            if (session?.user) {
-                fetchUserProfile(session.user.id);
-            } else {
-                setUser(null);
-                setLoading(false);
-            }
-        });
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            setUser(JSON.parse(savedUser));
+        }
+        setLoading(false);
     }, []);
 
-    async function fetchUserProfile(userId: string) {
-        const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
-        setUser(data ?? null);
-        setLoading(false);
-    }
-
+    // ✅ SIGN UP
     async function signUp(email: string, password: string, username: string, fullName: string) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) return { error: error.message };
-        if (!data.user) return { error: 'Sign up failed' };
+        try {
+            const res = await fetch("http://localhost:8081/api/users/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password, username, fullName })
+            });
 
-        const { error: profileError } = await supabase.from('users').insert({
-            id: data.user.id,
-            email,
-            username,
-            full_name: fullName,
-            password_hash: 'managed_by_supabase_auth',
-        });
-        if (profileError) return { error: profileError.message };
-        return { error: null };
+            if (!res.ok) {
+                const text = await res.text();
+                return { error: text || "Signup failed" };
+            }
+
+            return { error: null };
+        } catch (err) {
+            return { error: "Network error" };
+        }
     }
 
+    // ✅ SIGN IN
     async function signIn(email: string, password: string) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return { error: error.message };
-        return { error: null };
+        try {
+            const res = await fetch("http://localhost:8081/api/users/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (!res.ok) {
+                return { error: "Invalid email or password" };
+            }
+
+            const userData: User = await res.json();
+
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+
+            return { error: null };
+        } catch (err) {
+            return { error: "Network error" };
+        }
     }
 
+    // ✅ SIGN OUT
     async function signOut() {
-        await supabase.auth.signOut();
         setUser(null);
+        localStorage.removeItem('user');
     }
 
     return (
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
+// ✅ HOOK
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error('useAuth must be used within AuthProvider');
