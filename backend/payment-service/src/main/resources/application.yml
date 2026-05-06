@@ -1,20 +1,21 @@
 spring:
   application:
-    name: order-service
+    name: payment-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/e_db
+    url: jdbc:postgresql://localhost:5432/payment_db
     username: postgres
-    password:
+    password: your_local_password
     driver-class-name: org.postgresql.Driver
+
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 5
       minimum-idle: 2
       connection-timeout: 30000
 
   jpa:
     hibernate:
-      ddl-auto: update   # use update for dev (auto create tables)
+      ddl-auto: update   # use 'update' locally
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
     properties:
@@ -22,13 +23,7 @@ spring:
         format_sql: true
 
 server:
-  port: 8083
-
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
+  port: 8084
 
 management:
   endpoints:
@@ -39,16 +34,9 @@ management:
     health:
       show-details: always
 
-services:
-  product-service:
-    url: http://localhost:8082
-  payment-service:
-    url: http://localhost:8084
-
-http:
-  client:
-    connect-timeout: 3000
-    read-timeout: 5000
+payment:
+  gateway:
+    simulate-failure-rate: 0.05   # 5% failure simulation
 
 logging:
   level:

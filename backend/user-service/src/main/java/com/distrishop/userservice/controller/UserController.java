@@ -2,6 +2,15 @@ package com.distrishop.userservice.controller;
 
 import com.distrishop.userservice.dto.*;
 import com.distrishop.userservice.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,6 +32,7 @@ import java.util.Map;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "User Service API", description = "Handles user registration, authentication, profile management, and token validation for other microservices.")
 public class UserController {
 
     private final UserService userService;
@@ -31,8 +41,27 @@ public class UserController {
      * POST /api/users/register
      * Creates a new user account.
      */
+    @Operation(
+            summary = "Register a new user",
+            description = "Creates a new user account using email, password, and other registration fields. Returns the created user profile if successful."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "User registered successfully",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "409", description = "User already exists or registration conflict",
+                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(
+            @RequestBody(
+                    description = "User registration request containing email, password, and required fields.",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = RegisterRequest.class))
+            )
+            @org.springframework.web.bind.annotation.RequestBody RegisterRequest request
+    ) {
         try {
             log.info("Registration attempt for email: {}", request.getEmail());
             UserResponse response = userService.register(request);
@@ -52,8 +81,29 @@ public class UserController {
      * POST /api/users/login
      * Authenticates user and returns a session token.
      */
+    @Operation(
+            summary = "Login user",
+            description = "Authenticates a user using email and password. Returns login token/session details if credentials are correct."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Invalid email or password",
+                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "403", description = "Login blocked (account disabled or restricted)",
+                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(
+            @RequestBody(
+                    description = "User login request containing email and password.",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = LoginRequest.class))
+            )
+            @org.springframework.web.bind.annotation.RequestBody LoginRequest request
+    ) {
         try {
             log.info("Login attempt for email: {}", request.getEmail());
             LoginResponse response = userService.login(request);
@@ -77,8 +127,23 @@ public class UserController {
      * GET /api/users/{id}
      * Fetches user profile by ID.
      */
+    @Operation(
+            summary = "Get user profile by ID",
+            description = "Fetches a user profile using the unique user ID."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User found successfully",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "404", description = "User not found",
+                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+    public ResponseEntity<?> getUserById(
+            @Parameter(description = "User ID to fetch the profile", example = "1", required = true)
+            @PathVariable Long id
+    ) {
         try {
             UserResponse response = userService.getUserById(id);
             return ResponseEntity.ok(response);
@@ -96,9 +161,30 @@ public class UserController {
      * PUT /api/users/{id}
      * Updates user profile fields.
      */
+    @Operation(
+            summary = "Update user profile",
+            description = "Updates user profile fields such as name, phone, or other editable attributes."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User updated successfully",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "404", description = "User not found",
+                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id,
-                                        @RequestBody UpdateUserRequest request) {
+    public ResponseEntity<?> updateUser(
+            @Parameter(description = "User ID to update", example = "1", required = true)
+            @PathVariable Long id,
+
+            @RequestBody(
+                    description = "Update request containing fields to modify user profile.",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = UpdateUserRequest.class))
+            )
+            @org.springframework.web.bind.annotation.RequestBody UpdateUserRequest request
+    ) {
         try {
             UserResponse response = userService.updateUser(id, request);
             return ResponseEntity.ok(response);
@@ -117,8 +203,23 @@ public class UserController {
      * Called by other microservices to validate authentication tokens.
      * This is the inter-service authentication check endpoint.
      */
+    @Operation(
+            summary = "Validate authentication token",
+            description = "Used by other microservices to validate if a token is valid. Returns token validation status and user details if valid."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token is valid",
+                    content = @Content(schema = @Schema(implementation = TokenValidationResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Token is invalid or expired",
+                    content = @Content(schema = @Schema(implementation = TokenValidationResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
     @GetMapping("/validate/{token}")
-    public ResponseEntity<?> validateToken(@PathVariable String token) {
+    public ResponseEntity<?> validateToken(
+            @Parameter(description = "Token to validate", required = true, example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+            @PathVariable String token
+    ) {
         try {
             TokenValidationResponse response = userService.validateToken(token);
             if (response.isValid()) {
@@ -137,6 +238,14 @@ public class UserController {
      * GET /api/users/health
      * Simple health check beyond actuator.
      */
+    @Operation(
+            summary = "Health check endpoint",
+            description = "Returns basic service health status and metadata. Useful for testing and monitoring."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Service is UP",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of(

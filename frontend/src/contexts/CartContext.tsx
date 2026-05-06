@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { CartItem } from '../types';
 import { useAuth } from './AuthContext';
 
-const API_URL = "http://localhost:8081/api/cart";
+const API_URL = "http://localhost:8083/api/cart";
 
 interface CartContextType {
     items: CartItem[];
@@ -24,80 +24,94 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (user) fetchCart();
-        else setItems([]);
+        if (user?.id) {
+            fetchCart();
+        } else {
+            setItems([]);
+        }
     }, [user]);
 
     async function fetchCart() {
-        if (!user) return;
+        if (!user?.id) return;
+
         setLoading(true);
 
         try {
             const res = await fetch(`${API_URL}/${user.id}`);
+
+            if (!res.ok) {
+                console.error("Failed to fetch cart:", res.status);
+                setItems([]);
+                return;
+            }
+
             const data = await res.json();
-            setItems(data ?? []);
+
+            // IMPORTANT: Your backend returns CartResponse, not array directly
+            // Assume response structure: { items: [...] }
+            const cartItems = data?.items ?? [];
+
+            setItems(Array.isArray(cartItems) ? cartItems : []);
         } catch (err) {
             console.error("Fetch cart error:", err);
+            setItems([]);
         } finally {
             setLoading(false);
         }
     }
 
     async function addToCart(productId: string, quantity = 1) {
-        if (!user) return;
-
-        const existing = items.find(i => i.product_id === productId);
+        if (!user?.id) return;
 
         try {
-            if (existing) {
-                await fetch(`${API_URL}/update`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        userId: user.id,
-                        productId,
-                        quantity: existing.quantity + quantity
-                    })
-                });
-            } else {
-                await fetch(`${API_URL}/add`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        userId: user.id,
-                        productId,
-                        quantity
-                    })
-                });
+            const res = await fetch(`${API_URL}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: user.id,
+                    productId: Number(productId),
+                    quantity
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                console.error("Add to cart failed:", res.status, errData);
+                return;
             }
 
-            await fetchCart();
+            const data = await res.json();
+
+            // Backend returns CartResponse
+            const cartItems = data?.items ?? [];
+            setItems(Array.isArray(cartItems) ? cartItems : []);
         } catch (err) {
             console.error("Add to cart error:", err);
         }
     }
 
     async function removeFromCart(productId: string) {
-        if (!user) return;
+        if (!user?.id) return;
 
         try {
-            await fetch(`${API_URL}/remove`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    userId: user.id,
-                    productId
-                })
+            const res = await fetch(`${API_URL}/${user.id}/${productId}`, {
+                method: "DELETE"
             });
 
-            setItems(prev => prev.filter(i => i.product_id !== productId));
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                console.error("Remove from cart failed:", res.status, errData);
+                return;
+            }
+
+            setItems(prev => prev.filter(i => String(i.product_id) !== String(productId)));
         } catch (err) {
             console.error("Remove error:", err);
         }
     }
 
     async function updateQuantity(productId: string, quantity: number) {
-        if (!user) return;
+        if (!user?.id) return;
 
         if (quantity <= 0) {
             await removeFromCart(productId);
@@ -105,33 +119,41 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-            await fetch(`${API_URL}/update`, {
-                method: "PUT",
+            const res = await fetch(`${API_URL}`, {
+                method: "POST", // backend uses POST for add/update
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     userId: user.id,
-                    productId,
+                    productId: Number(productId),
                     quantity
                 })
             });
 
-            setItems(prev =>
-                prev.map(i =>
-                    i.product_id === productId ? { ...i, quantity } : i
-                )
-            );
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                console.error("Update quantity failed:", res.status, errData);
+                return;
+            }
+
+            const data = await res.json();
+            const cartItems = data?.items ?? [];
+            setItems(Array.isArray(cartItems) ? cartItems : []);
         } catch (err) {
             console.error("Update quantity error:", err);
         }
     }
 
     async function clearCart() {
-        if (!user) return;
+        if (!user?.id) return;
 
         try {
-            await fetch(`${API_URL}/clear/${user.id}`, {
-                method: "DELETE"
-            });
+            // No backend endpoint for clearing cart directly
+            // So we remove each item one by one
+            for (const item of items) {
+                await fetch(`${API_URL}/${user.id}/${item.product_id}`, {
+                    method: "DELETE"
+                });
+            }
 
             setItems([]);
         } catch (err) {
@@ -139,16 +161,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
-    const total = items.reduce(
-        (sum, i) => sum + (i.products?.price ?? 0) * i.quantity,
+    const safeItems = Array.isArray(items) ? items : [];
+
+    const itemCount = safeItems.reduce(
+        (sum, i) => sum + (i.quantity || 0),
+        0
+    );
+
+    const total = safeItems.reduce(
+        (sum, i) =>
+            sum + ((i.products?.price ?? 0) * (i.quantity || 0)),
         0
     );
 
     return (
         <CartContext.Provider
             value={{
-                items,
+                items: safeItems,
                 loading,
                 itemCount,
                 total,

@@ -60,25 +60,36 @@ export default function CartPage() {
                                     {item.products?.name}
                                 </Link>
                                 <p className="text-xs text-slate-400 mt-0.5">SKU: {item.products?.sku}</p>
+
                                 <div className="flex items-center justify-between mt-3">
                                     <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
                                         <button
-                                            onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                                            onClick={() => updateQuantity(String(item.product_id), item.quantity - 1)}
                                             className="px-3 py-1 text-slate-600 hover:bg-slate-100 transition-colors text-sm"
-                                        >-</button>
-                                        <span className="px-3 py-1 border-x border-slate-200 text-sm font-medium">{item.quantity}</span>
+                                        >
+                                            -
+                                        </button>
+
+                                        <span className="px-3 py-1 border-x border-slate-200 text-sm font-medium">
+                                            {item.quantity}
+                                        </span>
+
                                         <button
-                                            onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                                            onClick={() => updateQuantity(String(item.product_id), item.quantity + 1)}
                                             className="px-3 py-1 text-slate-600 hover:bg-slate-100 transition-colors text-sm"
-                                        >+</button>
+                                        >
+                                            +
+                                        </button>
                                     </div>
+
                                     <div className="flex items-center gap-4">
-                    <span className="font-bold text-slate-900">
-                      ${((item.products?.price ?? 0) * item.quantity).toFixed(2)}
-                    </span>
+                                        <span className="font-bold text-slate-900">
+                                            ${((item.products?.price ?? 0) * item.quantity).toFixed(2)}
+                                        </span>
+
                                         <button
                                             onClick={async () => {
-                                                await removeFromCart(item.product_id);
+                                                await removeFromCart(String(item.product_id));
                                                 toast.success('Item removed');
                                             }}
                                             className="text-red-400 hover:text-red-600 transition-colors"
@@ -96,19 +107,23 @@ export default function CartPage() {
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-100 p-6 sticky top-20">
                         <h2 className="font-bold text-slate-900 text-lg mb-5">Order Summary</h2>
+
                         <div className="space-y-3 text-sm">
                             <div className="flex justify-between text-slate-600">
                                 <span>Subtotal ({itemCount} items)</span>
                                 <span>${total.toFixed(2)}</span>
                             </div>
+
                             <div className="flex justify-between text-slate-600">
                                 <span>Shipping</span>
                                 <span>{shipping === 0 ? <span className="text-green-600">Free</span> : `$${shipping.toFixed(2)}`}</span>
                             </div>
+
                             <div className="flex justify-between text-slate-600">
                                 <span>Tax (8%)</span>
                                 <span>${tax.toFixed(2)}</span>
                             </div>
+
                             <div className="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900">
                                 <span>Total</span>
                                 <span>${orderTotal.toFixed(2)}</span>
@@ -127,6 +142,7 @@ export default function CartPage() {
                         >
                             Proceed to Checkout <ArrowRight size={16} />
                         </button>
+
                         <Link to="/products" className="mt-3 block text-center text-sm text-blue-600 hover:underline">
                             Continue Shopping
                         </Link>
