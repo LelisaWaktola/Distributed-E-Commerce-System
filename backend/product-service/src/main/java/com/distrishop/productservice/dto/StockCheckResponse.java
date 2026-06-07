@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 /**
  * Response for the stock check endpoint consumed by order-service.
  * Demonstrates the API contract between microservices.
@@ -19,4 +21,5 @@ public class StockCheckResponse {
     private Integer availableStock;
     private boolean inStock;
     private String status;
+    private BigDecimal price;
 }

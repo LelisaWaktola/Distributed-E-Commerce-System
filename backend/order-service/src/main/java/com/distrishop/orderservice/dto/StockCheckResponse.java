@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 /**
  * DTO mirroring the response from product-service's /api/products/stock/check/{id}.
  * Kept here as a local contract type for deserialization.
@@ -17,4 +19,5 @@ public class StockCheckResponse {
     private Integer availableStock;
     private boolean inStock;
     private String status;
+    private BigDecimal price;
 }

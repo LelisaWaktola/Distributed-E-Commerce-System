@@ -48,48 +48,37 @@ export default function CartPage() {
                     {items.map(item => (
                         <div key={item.id} className="bg-white rounded-2xl border border-slate-100 p-5 flex gap-4">
                             <img
-                                src={item.products?.image_url}
-                                alt={item.products?.name}
+                                src={item.product?.image_url || 'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=200'}
+                                alt={item.product?.name}
                                 className="w-20 h-20 object-cover rounded-xl bg-slate-100 flex-shrink-0"
                             />
                             <div className="flex-1 min-w-0">
                                 <Link
-                                    to={`/products/${item.products?.slug}`}
+                                    to={`/products/${item.product?.slug || item.product_id}`}
                                     className="font-semibold text-slate-900 hover:text-blue-600 transition-colors line-clamp-2 text-sm"
                                 >
-                                    {item.products?.name}
+                                    {item.product?.name || `Product #${item.product_id}`}
                                 </Link>
-                                <p className="text-xs text-slate-400 mt-0.5">SKU: {item.products?.sku}</p>
-
+                                <p className="text-xs text-slate-400 mt-0.5">SKU: {item.product?.sku || '-'}</p>
                                 <div className="flex items-center justify-between mt-3">
                                     <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
                                         <button
-                                            onClick={() => updateQuantity(String(item.product_id), item.quantity - 1)}
+                                            onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
                                             className="px-3 py-1 text-slate-600 hover:bg-slate-100 transition-colors text-sm"
-                                        >
-                                            -
-                                        </button>
-
-                                        <span className="px-3 py-1 border-x border-slate-200 text-sm font-medium">
-                                            {item.quantity}
-                                        </span>
-
+                                        >-</button>
+                                        <span className="px-3 py-1 border-x border-slate-200 text-sm font-medium">{item.quantity}</span>
                                         <button
-                                            onClick={() => updateQuantity(String(item.product_id), item.quantity + 1)}
+                                            onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                                             className="px-3 py-1 text-slate-600 hover:bg-slate-100 transition-colors text-sm"
-                                        >
-                                            +
-                                        </button>
+                                        >+</button>
                                     </div>
-
                                     <div className="flex items-center gap-4">
-                                        <span className="font-bold text-slate-900">
-                                            ${((item.products?.price ?? 0) * item.quantity).toFixed(2)}
-                                        </span>
-
+                    <span className="font-bold text-slate-900">
+                      ${((item.product?.price ?? 0) * item.quantity).toFixed(2)}
+                    </span>
                                         <button
                                             onClick={async () => {
-                                                await removeFromCart(String(item.product_id));
+                                                await removeFromCart(item.product_id);
                                                 toast.success('Item removed');
                                             }}
                                             className="text-red-400 hover:text-red-600 transition-colors"
@@ -107,23 +96,19 @@ export default function CartPage() {
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-100 p-6 sticky top-20">
                         <h2 className="font-bold text-slate-900 text-lg mb-5">Order Summary</h2>
-
                         <div className="space-y-3 text-sm">
                             <div className="flex justify-between text-slate-600">
                                 <span>Subtotal ({itemCount} items)</span>
                                 <span>${total.toFixed(2)}</span>
                             </div>
-
                             <div className="flex justify-between text-slate-600">
                                 <span>Shipping</span>
                                 <span>{shipping === 0 ? <span className="text-green-600">Free</span> : `$${shipping.toFixed(2)}`}</span>
                             </div>
-
                             <div className="flex justify-between text-slate-600">
                                 <span>Tax (8%)</span>
                                 <span>${tax.toFixed(2)}</span>
                             </div>
-
                             <div className="border-t border-slate-100 pt-3 flex justify-between font-bold text-slate-900">
                                 <span>Total</span>
                                 <span>${orderTotal.toFixed(2)}</span>
@@ -142,13 +127,12 @@ export default function CartPage() {
                         >
                             Proceed to Checkout <ArrowRight size={16} />
                         </button>
-
                         <Link to="/products" className="mt-3 block text-center text-sm text-blue-600 hover:underline">
                             Continue Shopping
                         </Link>
 
                         <p className="mt-4 text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
-                            ↗ Cart managed by <strong>Order Service (Node 3)</strong> via REST API
+                            Cart managed by <strong>Order Service (Node 3)</strong> via REST API
                         </p>
                     </div>
                 </div>

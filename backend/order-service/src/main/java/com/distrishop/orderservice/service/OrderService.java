@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -84,6 +85,7 @@ public class OrderService {
                     .userId(request.getUserId())
                     .productId(request.getProductId())
                     .productName(stock.getProductName())
+                    .unitPrice(stock.getPrice())
                     .quantity(request.getQuantity())
                     .build();
         }
@@ -257,6 +259,17 @@ public class OrderService {
                 return response.getBody();
             }
             throw new ServiceUnavailableException("payment-service returned non-2xx for order: " + request.getOrderId());
+        } catch (HttpClientErrorException e) {
+            // 402 Payment Required = gateway declined - treat as soft failure, not an outage
+            PaymentResponse declined = null;
+            try {
+                declined = e.getResponseBodyAs(PaymentResponse.class);
+            } catch (Exception ignored) {}
+            if (declined != null) {
+                log.warn("Payment declined by gateway for orderId={}: {}", request.getOrderId(), declined.getMessage());
+                return declined;
+            }
+            throw new ServiceUnavailableException("payment-service client error for order: " + request.getOrderId());
         } catch (ResourceAccessException e) {
             log.error("payment-service is unreachable: {}", e.getMessage());
             throw new ServiceUnavailableException(

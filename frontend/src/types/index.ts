@@ -46,6 +46,7 @@ export interface CartItem {
     product_id: string;
     quantity: number;
     added_at: string;
+    product?: Partial<Product>;
     products?: Product;
 }
 

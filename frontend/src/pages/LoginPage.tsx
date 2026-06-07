@@ -1,16 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Package, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-    const { signIn } = useAuth();
+    const { signIn, user } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+
+        if (user.role === 'admin') {
+            navigate('/admin');
+        } else {
+            navigate('/');
+        }
+    }, [user, navigate]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -20,7 +30,6 @@ export default function LoginPage() {
             toast.error(error);
         } else {
             toast.success('Welcome back!');
-            navigate('/');
         }
         setLoading(false);
     }

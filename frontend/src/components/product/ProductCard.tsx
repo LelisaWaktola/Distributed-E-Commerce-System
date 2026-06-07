@@ -1,117 +1,83 @@
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star, AlertCircle } from 'lucide-react';
 import type { Product } from '../../types';
+import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
-
-const CART_API = "http://localhost:8083/api/cart";
 
 interface Props {
     product: Product;
 }
 
 export default function ProductCard({ product }: Props) {
+    const { addToCart } = useCart();
     const { user } = useAuth();
 
     async function handleAddToCart(e: React.MouseEvent) {
         e.preventDefault();
-
         if (!user) {
             toast.error('Please sign in to add items to cart');
             return;
         }
-
-        try {
-            await fetch(CART_API, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    userId: user.id,
-                    productId: product.id,
-                    quantity: 1
-                })
-            });
-
-            toast.success(`${product.name} added to cart`);
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to add to cart");
-        }
+        await addToCart(product.id);
+        toast.success(`${product.name} added to cart`);
     }
 
-    // ✅ SAFE values (prevents crashes from backend nulls)
-    const price = product.price ?? 0;
-    const originalPrice = product.original_price ?? 0;
-    const rating = product.rating ?? 0;
-    const stock = product.stock_quantity ?? 0;
-
-    const discount =
-        originalPrice > 0
-            ? Math.round((1 - price / originalPrice) * 100)
-            : null;
+    const discount = product.original_price
+        ? Math.round((1 - product.price / product.original_price) * 100)
+        : null;
 
     return (
-        <Link
-            to={`/products/${product.slug}`}
-            className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
-        >
-            {/* IMAGE */}
-            <div className="relative aspect-square bg-slate-50">
+        <Link to={`/products/${product.slug}`} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
+            <div className="relative overflow-hidden aspect-square bg-slate-50">
                 <img
-                    src={product.imageUrl}
+                    src={product.image_url}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
                 />
-
                 {discount && (
-                    <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                        -{discount}%
-                    </span>
+                    <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            -{discount}%
+          </span>
                 )}
-
-                {stock === 0 && (
+                {product.stock_quantity === 0 && (
                     <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                        <span className="flex items-center gap-1 text-slate-600 text-sm">
-                            <AlertCircle size={14} /> Out of Stock
-                        </span>
+            <span className="flex items-center gap-1 text-slate-600 text-sm font-medium">
+              <AlertCircle size={14} /> Out of Stock
+            </span>
                     </div>
+                )}
+                {product.is_featured && (
+                    <span className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            Featured
+          </span>
                 )}
             </div>
 
-            {/* CONTENT */}
             <div className="p-4 flex flex-col flex-1">
-                <p className="text-xs text-slate-400">
-                    {product.categories?.name || 'Uncategorized'}
-                </p>
-
-                <h3 className="font-semibold text-sm mb-2 group-hover:text-blue-600">
+                <p className="text-xs text-slate-400 mb-1">{product.categories?.name}</p>
+                <h3 className="font-semibold text-slate-900 text-sm leading-snug mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                     {product.name}
                 </h3>
 
-                {/* RATING (SAFE) */}
                 <div className="flex items-center gap-1 mb-3">
                     <Star size={12} className="text-amber-400 fill-amber-400" />
-                    <span className="text-xs">{rating.toFixed(1)}</span>
+                    <span className="text-xs text-slate-600">{product.rating.toFixed(1)}</span>
+                    <span className="text-xs text-slate-400">({product.review_count})</span>
                 </div>
 
-                {/* PRICE + CART */}
-                <div className="flex justify-between mt-auto items-center">
+                <div className="flex items-center justify-between mt-auto">
                     <div>
-                        <span className="font-bold">
-                            ${price.toFixed(2)}
-                        </span>
-
-                        {originalPrice > 0 && (
-                            <span className="text-xs text-slate-400 line-through ml-2">
-                                ${originalPrice.toFixed(2)}
-                            </span>
+                        <span className="font-bold text-slate-900">${product.price.toFixed(2)}</span>
+                        {product.original_price && (
+                            <span className="text-xs text-slate-400 line-through ml-2">${product.original_price.toFixed(2)}</span>
                         )}
                     </div>
-
                     <button
                         onClick={handleAddToCart}
-                        disabled={stock === 0}
-                        className="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                        disabled={product.stock_quantity === 0}
+                        className="flex items-center gap-1 bg-blue-600 text-white text-xs px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <ShoppingCart size={12} />
                         Add

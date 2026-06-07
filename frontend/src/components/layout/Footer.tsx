@@ -11,14 +11,6 @@ export default function Footer() {
                             <Package size={24} className="text-blue-400" />
                             DistriShop
                         </Link>
-                        <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-                            A distributed e-commerce system demonstrating microservices architecture,
-                            inter-node communication, fault tolerance, and scalability concepts.
-                        </p>
-                        <div className="flex items-center gap-2 mt-4">
-                            <Activity size={14} className="text-green-400" />
-                            <span className="text-xs text-slate-400">4 Services Running</span>
-                        </div>
                     </div>
 
                     <div>
@@ -44,14 +36,8 @@ export default function Footer() {
 
                 <div className="border-t border-slate-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <p className="text-xs text-slate-500">
-                        © 2024 DistriShop — Distributed E-Commerce System
+                        © 2026 DistriShop — Distributed E-Commerce System
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <span>Node 1: User Service :8081</span>
-                        <span>Node 2: Product Service :8082</span>
-                        <span>Node 3: Order Service :8083</span>
-                        <span>Node 4: Payment Service :8084</span>
-                    </div>
                 </div>
             </div>
         </footer>

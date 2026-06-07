@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Loader2, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { CreditCard, Loader as Loader2, CircleCheck as CheckCircle } from 'lucide-react';
+import { orderApi } from '../lib/api';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -55,87 +55,16 @@ export default function CheckoutPage() {
         setLoading(true);
 
         try {
-            // Generate order number
-            const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const address = `${form.fullName}, ${form.street}, ${form.city}, ${form.state} ${form.zipCode}, ${form.country}`;
+            const paymentMethod = form.paymentMethod === 'card' ? 'CREDIT_CARD' : form.paymentMethod === 'paypal' ? 'PAYPAL' : 'CASH_ON_DELIVERY';
 
-            // Create order (Order Service - Node 3)
-            const { data: order, error: orderError } = await supabase.from('orders').insert({
-                order_number: orderNumber,
-                user_id: user.id,
-                status: 'pending',
-                subtotal: total,
-                shipping_cost: shipping,
-                tax_amount: tax,
-                total_amount: orderTotal,
-                shipping_address: {
-                    full_name: form.fullName,
-                    street: form.street,
-                    city: form.city,
-                    state: form.state,
-                    zip_code: form.zipCode,
-                    country: form.country,
-                    phone: form.phone,
-                },
-                notes: form.notes,
-            }).select().maybeSingle();
-
-            if (orderError) throw orderError;
-
-            // Create order items
-            const orderItems = items.map(item => ({
-                order_id: order.id,
-                product_id: item.product_id,
-                product_name: item.products?.name || '',
-                product_sku: item.products?.sku || '',
-                product_image: item.products?.image_url || '',
-                quantity: item.quantity,
-                unit_price: item.products?.price || 0,
-                total_price: (item.products?.price || 0) * item.quantity,
-            }));
-
-            await supabase.from('order_items').insert(orderItems);
-
-            // Simulate payment processing (Payment Service - Node 4)
-            const txId = `TXN-${Date.now()}`;
-            await supabase.from('payments').insert({
-                order_id: order.id,
-                user_id: user.id,
-                amount: orderTotal,
-                currency: 'USD',
-                method: form.paymentMethod,
-                status: 'completed',
-                transaction_id: txId,
-                card_last_four: form.paymentMethod === 'card' ? form.cardNumber.slice(-4) : null,
-                card_brand: form.paymentMethod === 'card' ? 'Visa' : null,
-                processed_at: new Date().toISOString(),
-            });
-
-            // Update order status
-            await supabase.from('orders').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('id', order.id);
-
-            // Update product stock
-            for (const item of items) {
-                const prod = item.products;
-                if (prod) {
-                    await supabase
-                        .from('products')
-                        .update({ stock_quantity: Math.max(0, prod.stock_quantity - item.quantity) })
-                        .eq('id', item.product_id);
-                }
-            }
-
-            // Log inter-service communication
-            await supabase.from('inter_service_calls').insert([
-                { from_service: 'order-service', to_service: 'product-service', endpoint: '/api/products/stock/check', method: 'GET', status_code: 200, response_time_ms: 45, success: true },
-                { from_service: 'order-service', to_service: 'payment-service', endpoint: '/api/payments/process', method: 'POST', status_code: 200, response_time_ms: 120, success: true },
-                { from_service: 'order-service', to_service: 'user-service', endpoint: '/api/users/validate', method: 'GET', status_code: 200, response_time_ms: 30, success: true },
-            ]);
+            await orderApi.createOrder(Number(user.id), address, form.notes, paymentMethod);
 
             await clearCart();
             setStep('success');
             toast.success('Order placed successfully!');
-        } catch (err) {
-            toast.error('Failed to place order. Please try again.');
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to place order. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -155,9 +84,9 @@ export default function CheckoutPage() {
                     </p>
                     <div className="text-xs text-left bg-blue-50 rounded-xl p-4 mb-6 space-y-1">
                         <p className="font-semibold text-blue-700 mb-2">Inter-Node Communication Log:</p>
-                        <p className="text-blue-600">✓ Order Service → Product Service: stock verified</p>
-                        <p className="text-blue-600">✓ Order Service → Payment Service: payment processed</p>
-                        <p className="text-blue-600">✓ Order Service → User Service: identity validated</p>
+                        <p className="text-blue-600">{'Order Service -> Product Service: stock verified'}</p>
+                        <p className="text-blue-600">{'Order Service -> Payment Service: payment processed'}</p>
+                        <p className="text-blue-600">{'Order Service -> User Service: identity validated'}</p>
                     </div>
                     <div className="flex gap-3">
                         <button onClick={() => navigate('/orders')} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
@@ -255,7 +184,7 @@ export default function CheckoutPage() {
                             </p>
                         )}
                         <p className="mt-3 text-xs text-blue-600">
-                            ↗ Payment processed by <strong>Payment Service (Node 4)</strong>
+                            Payment processed by <strong>Payment Service (Node 4)</strong>
                         </p>
                     </div>
 
@@ -279,12 +208,12 @@ export default function CheckoutPage() {
                         <div className="space-y-3 mb-5">
                             {items.map(item => (
                                 <div key={item.id} className="flex gap-3 text-sm">
-                                    <img src={item.products?.image_url} alt="" className="w-12 h-12 object-cover rounded-lg bg-slate-100" />
+                                    <img src={item.product?.image_url || 'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=100'} alt="" className="w-12 h-12 object-cover rounded-lg bg-slate-100" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-slate-900 text-xs line-clamp-2">{item.products?.name}</p>
+                                        <p className="font-medium text-slate-900 text-xs line-clamp-2">{item.product?.name}</p>
                                         <p className="text-slate-400 text-xs">x{item.quantity}</p>
                                     </div>
-                                    <span className="font-medium text-slate-900 text-xs">${((item.products?.price ?? 0) * item.quantity).toFixed(2)}</span>
+                                    <span className="font-medium text-slate-900 text-xs">${((item.product?.price ?? 0) * item.quantity).toFixed(2)}</span>
                                 </div>
                             ))}
                         </div>

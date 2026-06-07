@@ -123,6 +123,7 @@ public class ProductService {
                 .availableStock(product.getStockQuantity())
                 .inStock(product.getStockQuantity() > 0)
                 .status(product.getStatus().name())
+                .price(product.getPrice())
                 .build();
     }
 

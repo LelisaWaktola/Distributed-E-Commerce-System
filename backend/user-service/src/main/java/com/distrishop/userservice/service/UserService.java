@@ -36,7 +36,7 @@ public class UserService {
 
         User user = User.builder()
                 .email(request.getEmail())
-                .fullName(request.getFullName())
+                .name(request.getName())
                 .passwordHash(hashPassword(request.getPassword()))
                 .phone(request.getPhone())
                 .role(User.UserRole.CUSTOMER)
@@ -77,7 +77,7 @@ public class UserService {
         return LoginResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
-                .name(user.getFullName())
+                .name(user.getName())
                 .token(token)
                 .role(user.getRole().name())
                 .expiresIn(SESSION_DURATION_HOURS * 3600)
@@ -97,7 +97,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
 
         if (request.getName() != null) {
-            user.setFullName(request.getName());
+            user.setName(request.getName());
         }
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
@@ -159,7 +159,7 @@ public class UserService {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
-                .name(user.getFullName())
+                .name(user.getName())
                 .phone(user.getPhone())
                 .role(user.getRole().name())
                 .isActive(user.getIsActive())
