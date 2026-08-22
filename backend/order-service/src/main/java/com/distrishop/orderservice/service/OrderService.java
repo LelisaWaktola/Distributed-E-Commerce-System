@@ -137,6 +137,8 @@ public class OrderService {
             }
         }
 
+
+
         // Calculate total
         BigDecimal total = cartItems.stream()
                 .filter(c -> c.getUnitPrice() != null)
@@ -197,6 +199,16 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(order -> {
+                    List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+                    return toOrderResponse(order, items);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<OrderResponse> getOrdersByUserId(Long userId) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(order -> {
@@ -204,6 +216,33 @@ public class OrderService {
                     return toOrderResponse(order, items);
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(Long orderId, String status) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Order not found: " + orderId));
+
+        Order.OrderStatus newStatus;
+
+        try {
+            newStatus = Order.OrderStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Invalid order status: " + status
+            );
+        }
+
+        order.setStatus(newStatus);
+
+        Order savedOrder = orderRepository.save(order);
+
+        List<OrderItem> items =
+                orderItemRepository.findByOrderId(savedOrder.getId());
+
+        return toOrderResponse(savedOrder, items);
     }
 
     @Transactional(readOnly = true)
@@ -281,6 +320,8 @@ public class OrderService {
             throw new ServiceUnavailableException("Failed to reach payment-service: " + e.getMessage());
         }
     }
+
+
 
     // ==============================
     // MAPPERS

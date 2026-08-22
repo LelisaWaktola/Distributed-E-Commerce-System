@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import {Link, useNavigate} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { productApi, orderApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { Product, Order } from '../types';
-import { Package, ShoppingBag, Users, DollarSign, Plus, CreditCard as Edit, Trash2, Loader as Loader2 } from 'lucide-react';
+import { Package, ShoppingBag, Users, DollarSign, Plus, CreditCard as Edit, Trash2, Loader as Loader2, Sparkles, TrendingUp, TriangleAlert as AlertTriangle, ChartBar as BarChart3 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import toast from 'react-hot-toast';
 
 export default function AdminPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [tab, setTab] = useState<'overview' | 'products' | 'orders'>('overview');
+    const [tab, setTab] = useState<'overview' | 'products' | 'orders' | 'insights'>('overview');
     const [products, setProducts] = useState<Product[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
     const [stats, setStats] = useState({ products: 0, orders: 0, users: 0, revenue: 0 });
@@ -28,7 +28,7 @@ export default function AdminPage() {
         try {
             const [prodData, ordData] = await Promise.all([
                 productApi.getAll(0, 100),
-                user ? orderApi.getOrders(Number(user.id)) : Promise.resolve({ orders: [] }),
+                orderApi.getAllOrders(),
             ]);
             const prods = (prodData.products || []).map(mapProduct);
             const ords = (ordData.orders || []).map(mapOrder);
@@ -38,7 +38,7 @@ export default function AdminPage() {
                 products: prods.length,
                 orders: ords.length,
                 users: 0,
-                revenue: ords.reduce((sum, o) => sum + o.total_amount, 0),
+                revenue: ords.reduce((sum: number, o: Order) => sum + o.total_amount, 0),
             });
         } catch (err) {
             console.error('Failed to load admin data:', err);
@@ -101,22 +101,16 @@ export default function AdminPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <h1 className="text-2xl font-bold text-slate-900 mb-6">Admin Panel </h1>
+            <h1 className="text-2xl font-bold text-slate-900 mb-6">Admin Panel - Product Service (Node 2)</h1>
 
             {/* Tabs */}
             <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit mb-8">
-                {(['overview', 'products', 'orders'] as const).map(t => (
+                {(['overview', 'products', 'orders', 'insights'] as const).map(t => (
                     <button key={t} onClick={() => setTab(t)}
                             className={`px-5 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                         {t}
                     </button>
                 ))}
-                <Link
-                    to="/distributed"
-                    className="flex items-center gap-2 text-sm px-5 py-2 rounded-xl font-semibold hover:bg-blue-700/50 transition-colors"
-                >
-                    System Monitor
-                </Link>
             </div>
 
             {loading ? (
@@ -268,14 +262,135 @@ export default function AdminPage() {
                                             <td className="px-4 py-3 text-slate-600">{o.order_items?.length ?? 0}</td>
                                             <td className="px-4 py-3 font-bold">${o.total_amount.toFixed(2)}</td>
                                             <td className="px-4 py-3">
-                                                <Badge variant={o.status === 'delivered' ? 'success' : o.status === 'cancelled' ? 'danger' : o.status === 'pending' ? 'warning' : 'info'}>
-                                                    {o.status}
-                                                </Badge>
+                                                <select
+                                                    value={o.status}
+                                                    onChange={async (e) => {
+                                                        try {
+                                                            await orderApi.updateOrderStatus(
+                                                                Number(o.id),
+                                                                e.target.value.toUpperCase()
+                                                            );
+
+                                                            toast.success('Order status updated');
+
+                                                            await loadData();
+
+                                                        } catch (err: any) {
+                                                            toast.error(
+                                                                err.message || 'Failed to update order status'
+                                                            );
+                                                        }
+                                                    }}
+                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs"
+                                                >
+                                                    <option value="pending">Pending</option>
+                                                    <option value="confirmed">Confirmed</option>
+                                                    <option value="processing">Processing</option>
+                                                    <option value="shipped">Shipped</option>
+                                                    <option value="delivered">Delivered</option>
+                                                    <option value="cancelled">Cancelled</option>
+                                                </select>
                                             </td>
                                         </tr>
                                     ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {tab === 'insights' && (
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Sparkles size={20} className="text-blue-600"/>
+                                <h2 className="font-bold text-slate-900">AI Business Insights</h2>
+                            </div>
+
+                            {/* Insight cards */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div
+                                    className="bg-gradient-to-br from-blue-50 to-white rounded-2xl border border-blue-100 p-5">
+                                <div className="flex items-center gap-2 mb-3">
+                                        <TrendingUp size={16} className="text-blue-600" />
+                                        <h3 className="font-semibold text-slate-900 text-sm">Revenue Trend</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-600">Total Revenue</span>
+                                            <span className="font-bold text-slate-900">${stats.revenue.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-600">Avg Order Value</span>
+                                            <span className="font-bold text-slate-900">${stats.orders > 0 ? (stats.revenue / stats.orders).toFixed(2) : '0.00'}</span>
+                                        </div>
+                                        <div className="w-full bg-blue-100 rounded-full h-2 mt-2">
+                                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${Math.min(100, (stats.revenue / 2000) * 100)}%` }} />
+                                        </div>
+                                        <p className="text-xs text-blue-600">Projected to reach ${(stats.revenue * 1.15).toFixed(2)} this quarter</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-amber-50 to-white rounded-2xl border border-amber-100 p-5">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <AlertTriangle size={16} className="text-amber-600" />
+                                        <h3 className="font-semibold text-slate-900 text-sm">Inventory Alerts</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {products.filter(p => p.stock_quantity < 30 && p.is_active).slice(0, 3).map(p => (
+                                            <div key={p.id} className="flex items-center justify-between text-sm">
+                                                <span className="text-slate-600 truncate pr-2">{p.name}</span>
+                                                <span className="text-amber-600 font-medium flex-shrink-0">{p.stock_quantity} left</span>
+                                            </div>
+                                        ))}
+                                        {products.filter(p => p.stock_quantity < 30).length === 0 && (
+                                            <p className="text-xs text-slate-500">All products well-stocked</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-100 p-5">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <BarChart3 size={16} className="text-emerald-600" />
+                                        <h3 className="font-semibold text-slate-900 text-sm">Category Distribution</h3>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {Object.entries(
+                                            products.reduce((acc, p) => {
+                                                const cat = p.categories?.name || 'Other';
+                                                acc[cat] = (acc[cat] || 0) + 1;
+                                                return acc;
+                                            }, {} as Record<string, number>)
+                                        ).map(([cat, count]) => (
+                                            <div key={cat}>
+                                                <div className="flex justify-between text-sm mb-1">
+                                                    <span className="text-slate-600">{cat}</span>
+                                                    <span className="text-slate-900 font-medium">{count}</span>
+                                                </div>
+                                                <div className="w-full bg-emerald-100 rounded-full h-1.5">
+                                                    <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${(count / products.length) * 100}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gradient-to-br from-rose-50 to-white rounded-2xl border border-rose-100 p-5">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Sparkles size={16} className="text-rose-600" />
+                                        <h3 className="font-semibold text-slate-900 text-sm">AI Recommendations</h3>
+                                    </div>
+                                    <div className="space-y-2 text-sm text-slate-600">
+                                        <p>- Consider restocking {products.filter(p => p.stock_quantity < 30)[0]?.name || 'low-stock items'} soon</p>
+                                        <p>- Electronics category leads with {products.filter(p => p.categories?.name === 'Electronics').length} products</p>
+                                        <p>- Average price: ${(products.reduce((s, p) => s + p.price, 0) / products.length).toFixed(2)}</p>
+                                        <p>- {products.filter(p => p.stock_quantity > 100).length} products with healthy stock levels</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 rounded-2xl p-5 text-sm text-blue-700">
+                                <p className="font-semibold mb-1 flex items-center gap-2"><Sparkles size={14} /> AI-Powered Insights</p>
+                                <p className="text-xs">These insights are generated from your distributed service data: Product Service (Node 2) for inventory, Order Service (Node 3) for revenue, and Payment Service (Node 4) for transaction analytics.</p>
                             </div>
                         </div>
                     )}

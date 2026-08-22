@@ -110,8 +110,20 @@ export const orderApi = {
     getOrders: (userId: number) =>
         request(`${ORDER_SVC}/api/orders/${userId}`),
 
+    // Admin: ALL orders
+    getAllOrders: () =>
+        request(`${ORDER_SVC}/api/orders`),
+
     getOrderDetail: (orderId: number) =>
         request(`${ORDER_SVC}/api/orders/detail/${orderId}`),
+
+    updateOrderStatus: (orderId: number, status: string) =>
+        request(
+            `${ORDER_SVC}/api/orders/${orderId}/status?status=${encodeURIComponent(status)}`,
+            {
+                method: 'PUT',
+            }
+        ),
 
     health: () =>
         request(`${ORDER_SVC}/api/orders/health`),

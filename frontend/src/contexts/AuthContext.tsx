@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    async function signUp(email: string, password: string, username: string, fullName: string) {
+    async function signUp(email: string, password: string, _username: string, fullName: string) {
         try {
             const data = await userApi.register(email, password, fullName);
             if (data.token) {

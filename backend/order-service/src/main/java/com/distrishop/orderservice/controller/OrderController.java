@@ -151,6 +151,62 @@ public class OrderController {
         }
     }
 
+    /**
+     * GET /api/orders
+     * Returns all orders for admin management.
+     */
+    @Operation(
+            summary = "Get all orders",
+            description = "Returns all orders from all users. Intended for admin order management."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "All orders fetched successfully"),
+            @ApiResponse(responseCode = "500", description = "Internal server error while fetching orders",
+                    content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    @GetMapping
+    public ResponseEntity<?> getAllOrders() {
+        try {
+            List<OrderResponse> orders = orderService.getAllOrders();
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "orders", orders,
+                            "count", orders.size()
+                    )
+            );
+
+        } catch (Exception e) {
+            log.error("Error fetching all orders", e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch all orders"));
+        }
+    }
+
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestParam String status
+    ) {
+        try {
+            OrderResponse order =
+                    orderService.updateOrderStatus(orderId, status);
+
+            return ResponseEntity.ok(order);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("Error updating status for order {}", orderId, e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to update order status"));
+        }
+    }
+
     @Operation(
             summary = "Health check endpoint",
             description = "Returns health status of order-service and downstream dependencies such as product-service and payment-service."

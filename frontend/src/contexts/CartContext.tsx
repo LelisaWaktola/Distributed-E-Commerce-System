@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { orderApi, productApi } from '../lib/api';
-import type { CartItem, Product } from '../types';
+import { orderApi } from '../lib/api';
+import type { CartItem } from '../types';
 import { useAuth } from './AuthContext';
 
 interface CartContextType {
